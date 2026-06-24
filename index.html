@@ -1,46 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>AI历史人物猜谜</title>
+<title>AI历史人物游戏</title>
 </head>
 
 <body>
 
-<h2>AI历史人物猜谜</h2>
+<h1>AI历史人物猜谜</h1>
 
-<input id="name" placeholder="输入用户名">
-<button onclick="setName()">进入</button>
-
-<hr>
-
-<h3>选择难度</h3>
-
-<button onclick="setDifficulty('easy')">简单</button>
-<button onclick="setDifficulty('hard')">困难</button>
-<button onclick="setDifficulty('hell')">地狱</button>
+<div>
+<button onclick="setDiff('easy')">简单</button>
+<button onclick="setDiff('hard')">困难</button>
+<button onclick="setDiff('hell')">地狱</button>
+</div>
 
 <hr>
+
+<div id="log" style="white-space:pre-line;border:1px solid #ccc;padding:10px;height:400px;overflow:auto;"></div>
+
+<br>
 
 <input id="q" placeholder="提问">
-<button onclick="ask(document.getElementById('q').value)">提问</button>
+<button onclick="askQuestion(document.getElementById('q').value)">提问</button>
 
 <br><br>
 
-<button onclick="hint()">提示</button>
-
-<br><br>
-
-<input id="g" placeholder="猜测人物">
-<button onclick="guess(document.getElementById('g').value)">猜测</button>
-
-<br><br>
-
-<button onclick="end()">结束结算</button>
-
-<pre id="log"></pre>
+<button onclick="getHint()">提示</button>
+<button onclick="endGame()">放弃/结算</button>
 
 <script src="game.js"></script>
+
+<script>
+function setDiff(d){
+    state.difficulty = d;
+    document.getElementById("log").innerHTML += "\n🎮难度：" + d + "\n";
+}
+</script>
 
 </body>
 </html>

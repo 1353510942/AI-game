@@ -1,67 +1,17 @@
 let state = {
-    name: "",
-    difficulty: "",
+    difficulty: "easy",
     ask: 0,
     hint: 0,
     guess: 0,
-    hintLevel: 0,
     target: ""
 };
 
 // =========================
-// 👤 设置用户名
+// 💡 提示系统
 // =========================
-function setName() {
-    state.name = document.getElementById("name").value;
-}
-
-// =========================
-// 🎮 选择难度
-// =========================
-function setDifficulty(d) {
-    state.difficulty = d;
-
-    fetch("/api/deepseek", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            type: "generate",
-            state
-        })
-    })
-    .then(r => r.json())
-    .then(res => {
-        state.target = res.result;
-        log("游戏开始！");
-    });
-}
-
-// =========================
-// ❓ 提问
-// =========================
-function ask(q) {
-
-    state.ask++;
-
-    fetch("/api/deepseek", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            type: "ask",
-            state: {...state, question: q}
-        })
-    })
-    .then(r => r.json())
-    .then(res => log("AI：" + res.result));
-}
-
-// =========================
-// 💡 提示
-// =========================
-function hint() {
+function getHint() {
 
     state.hint++;
-    state.hintLevel++;
 
     fetch("/api/deepseek", {
         method: "POST",
@@ -72,27 +22,40 @@ function hint() {
         })
     })
     .then(r => r.json())
-    .then(res => log("提示：" + res.result));
+    .then(res => {
+        document.getElementById("log").innerHTML +=
+            "\n💡提示：" + res.result + "\n";
+    });
 }
 
 // =========================
-// 🎯 猜测
+// ❓提问
 // =========================
-function guess(g) {
+function askQuestion(q) {
+
+    state.ask++;
+
+    fetch("/api/deepseek", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            type: "ask",
+            state: { ...state, question: q }
+        })
+    })
+    .then(r => r.json())
+    .then(res => {
+        document.getElementById("log").innerHTML +=
+            "\n❓回答：" + res.result + "\n";
+    });
+}
+
+// =========================
+// 🏁 结算（重点：百科修复）
+// =========================
+function endGame() {
 
     state.guess++;
-
-    if (g === state.target) {
-        log("🎉 正确！");
-    } else {
-        log("❌ 错误");
-    }
-}
-
-// =========================
-// 🏁 结束
-// =========================
-function end() {
 
     fetch("/api/deepseek", {
         method: "POST",
@@ -103,9 +66,15 @@ function end() {
         })
     })
     .then(r => r.json())
-    .then(res => log(res.result));
-}
+    .then(res => {
 
-function log(t) {
-    document.getElementById("log").innerText += "\n" + t;
+        const wiki = "https://zh.wikipedia.org/wiki/" + encodeURIComponent(state.target);
+        const baidu = "https://baike.baidu.com/item/" + encodeURIComponent(state.target);
+
+        document.getElementById("log").innerHTML +=
+            "\n\n🏁结算结果：\n" +
+            res.result +
+            "\n\n📚 Wikipedia：" + wiki +
+            "\n📘 百度百科：" + baidu;
+    });
 }
