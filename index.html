@@ -2,41 +2,190 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>AI历史人物游戏</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 AI历史人物猜谜游戏</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        font-family: "Microsoft YaHei", Arial, sans-serif;
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 30px 10px;
+        color: #eee;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 700px;
+        background: #0f3460;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+        text-align: center;
+        font-size: 26px;
+        margin-bottom: 20px;
+        color: #e94560;
+    }
+
+    #welcomeText {
+        text-align: center;
+        color: #a8dadc;
+        font-size: 16px;
+        margin-bottom: 16px;
+        min-height: 24px;
+    }
+
+    input {
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: none;
+        font-size: 15px;
+        outline: none;
+        background: #1a1a2e;
+        color: #eee;
+        width: 60%;
+    }
+
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        cursor: pointer;
+        margin: 4px;
+        transition: 0.2s;
+    }
+
+    button:hover { opacity: 0.85; }
+
+    .btn-primary { background: #e94560; color: white; }
+    .btn-easy    { background: #06d6a0; color: #1a1a2e; font-weight: bold; }
+    .btn-hard    { background: #f77f00; color: white; font-weight: bold; }
+    .btn-hell    { background: #d62828; color: white; font-weight: bold; }
+    .btn-hint    { background: #457b9d; color: white; }
+    .btn-giveup  { background: #6c757d; color: white; }
+    .btn-restart { background: #e94560; color: white; display: none; }
+
+    hr { border-color: #1a4a7a; margin: 20px 0; }
+
+    #difficultyBox, #gameBox {
+        display: none;
+        text-align: center;
+    }
+
+    #difficultyBox h2, #gameBox h2 {
+        font-size: 20px;
+        margin-bottom: 16px;
+        color: #a8dadc;
+    }
+
+    #gameStatus {
+        font-size: 18px;
+        color: #e94560;
+        margin-bottom: 10px;
+    }
+
+    #chat {
+        background: #1a1a2e;
+        border-radius: 10px;
+        padding: 14px;
+        height: 320px;
+        overflow-y: auto;
+        text-align: left;
+        font-size: 14px;
+        line-height: 1.8;
+        margin-bottom: 16px;
+        color: #ccc;
+    }
+
+    #chat div { margin-bottom: 4px; }
+
+    .input-row {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+    }
+
+    .input-row input { width: 60%; }
+
+    #loginBox { text-align: center; }
+    #loginBox input { width: 50%; }
+
+    .difficulty-note {
+        font-size: 12px;
+        color: #6c8ebf;
+        margin-top: 10px;
+    }
+
+    a { color: #57cc99; }
+</style>
 </head>
 
 <body>
+<div class="container">
 
-<h1>AI历史人物猜谜</h1>
+    <h1>🎮 AI历史人物猜谜游戏</h1>
 
-<div>
-<button onclick="setDiff('easy')">简单</button>
-<button onclick="setDiff('hard')">困难</button>
-<button onclick="setDiff('hell')">地狱</button>
+    <div id="welcomeText"></div>
+
+    <!-- 登录区域 -->
+    <div id="loginBox">
+        <input id="username" placeholder="请输入用户名" maxlength="20">
+        <button class="btn-primary" onclick="login()">进入游戏</button>
+    </div>
+
+    <hr>
+
+    <!-- 难度选择 -->
+    <div id="difficultyBox">
+        <h2>选择难度</h2>
+        <div>
+            <button class="btn-easy" onclick="startGame('easy')">简单</button>
+            <button class="btn-hard" onclick="startGame('hard')">困难</button>
+            <button class="btn-hell" onclick="startGame('hell')">地狱</button>
+        </div>
+        <p class="difficulty-note">
+            简单：中小学课本人物 &nbsp;|&nbsp;
+            困难：大学扩展历史人物 &nbsp;|&nbsp;
+            地狱：极冷门历史人物
+        </p>
+    </div>
+
+    <!-- 游戏区域 -->
+    <div id="gameBox">
+        <div id="gameStatus">游戏中...</div>
+        <div id="chat"></div>
+
+        <div class="input-row">
+            <input id="question" placeholder="输入问题（如：他是中国人吗？）"
+                onkeydown="if(event.key==='Enter') ask()">
+            <button class="btn-primary" onclick="ask()">提问</button>
+        </div>
+
+        <div class="input-row">
+            <input id="guess" placeholder="输入你猜的人物名称"
+                onkeydown="if(event.key==='Enter') guess()">
+            <button class="btn-primary" onclick="guess()">猜测</button>
+        </div>
+
+        <div>
+            <button class="btn-hint" onclick="hint()">💡 提示</button>
+            <button class="btn-giveup" onclick="giveUp()">🏳️ 放弃本局</button>
+            <button class="btn-restart" id="restartBtn" onclick="restart()">🔄 重新开始</button>
+        </div>
+    </div>
+
 </div>
 
-<hr>
-
-<div id="log" style="white-space:pre-line;border:1px solid #ccc;padding:10px;height:400px;overflow:auto;"></div>
-
-<br>
-
-<input id="q" placeholder="提问">
-<button onclick="askQuestion(document.getElementById('q').value)">提问</button>
-
-<br><br>
-
-<button onclick="getHint()">提示</button>
-<button onclick="endGame()">放弃/结算</button>
-
 <script src="game.js"></script>
-
-<script>
-function setDiff(d){
-    state.difficulty = d;
-    document.getElementById("log").innerHTML += "\n🎮难度：" + d + "\n";
-}
-</script>
-
 </body>
 </html>
