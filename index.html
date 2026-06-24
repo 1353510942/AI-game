@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>AI历史人物猜谜游戏</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #f4f4f4;
+    text-align: center;
+}
+
+.container {
+    width: 650px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    margin-top: 40px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px #ccc;
+}
+
+#chat {
+    height: 300px;
+    border: 1px solid #ddd;
+    overflow-y: auto;
+    padding: 10px;
+    text-align: left;
+}
+
+input {
+    width: 60%;
+    padding: 8px;
+    margin: 5px;
+}
+
+button {
+    padding: 8px 10px;
+    margin: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🎮 AI历史人物猜谜游戏</h2>
+
+<!-- 🔥 登录区 -->
+<div id="loginBox">
+    <input id="username" placeholder="请输入你的名字">
+    <button onclick="login()">进入游戏</button>
+</div>
+
+<!-- 游戏区 -->
+<div id="gameBox" style="display:none">
+
+    <p id="welcome"></p>
+
+    <button onclick="startGame()">开始游戏</button>
+    <button onclick="giveUp()">放弃本局</button>
+
+    <hr>
+
+    <div id="chat"></div>
+
+    <input id="question" placeholder="输入问题">
+    <button onclick="ask()">提问</button>
+
+    <br>
+
+    <input id="guess" placeholder="猜人物">
+    <button onclick="guess()">猜测</button>
+
+    <button onclick="hint()">提示</button>
+
+</div>
+
+</div>
+
+<script src="game.js"></script>
+
+</body>
+</html>
