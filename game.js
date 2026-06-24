@@ -1,7 +1,6 @@
 // =============================================
 // 🔐 Supabase 配置
-// 替换下面两行为你的 Supabase 项目信息
-// Supabase → Settings → API 中找到
+// Supabase → Settings → API 中替换以下两行
 // =============================================
 const SUPABASE_URL = "https://xddrgmvrcldfnodylwip.supabase.co";
 const SUPABASE_KEY = "sb_publishable_WLLFrWKugeSBaViGn4OkPQ_Dmp6Zn1z";
@@ -15,6 +14,10 @@ let difficulty = "";
 let hintLevel = 0;
 let stats = { ask: 0, hint: 0, guess: 0 };
 let gameActive = false;
+
+// 累计总分（跨局保留）
+let totalScore = 0;
+let roundCount = 0;
 
 // =============================================
 // 👤 登录
@@ -40,45 +43,74 @@ async function startGame(d) {
     hintLevel = 0;
     stats = { ask: 0, hint: 0, guess: 0 };
     gameActive = true;
+    roundCount++;
 
     document.getElementById("difficultyBox").style.display = "none";
     document.getElementById("gameBox").style.display = "block";
     document.getElementById("gameStatus").innerText = "游戏中...";
-    document.getElementById("restartBtn").style.display = "none";
+
+    // 隐藏所有结算按钮
+    document.getElementById("continueBtn").style.display = "none";
+    document.getElementById("changeDiffBtn").style.display = "none";
+
+    // 更新总分显示
+    updateScoreDisplay();
 
     clearChat();
     addChat("🎮 系统：正在选择人物，请稍候...");
 
     const res = await callAPI({ type: "start", difficulty });
 
-    try {
-        const data = JSON.parse(res);
-        character = data.name;
-        addChat("🎮 游戏开始！难度：" + difficultyLabel(difficulty));
-        addChat("💬 请开始提问，或点击【提示】获得线索");
-        addChat("📌 提示：每次提问、猜测或使用提示都会影响最终得分");
-    } catch (e) {
-        // 如果 JSON 解析失败，尝试提取 JSON 部分
-        const match = res.match(/\{[\s\S]*\}/);
-        if (match) {
-            try {
-                const data = JSON.parse(match[0]);
-                character = data.name;
-                addChat("🎮 游戏开始！难度：" + difficultyLabel(difficulty));
-                addChat("💬 请开始提问，或点击【提示】获得线索");
-                return;
-            } catch (e2) { /* 继续往下 */ }
-        }
-        character = res.trim();
-        addChat("🎮 游戏开始！难度：" + difficultyLabel(difficulty));
-        addChat("💬 请开始提问，或点击【提示】获得线索");
-    }
+    // 解析人物名称
+    character = parseCharacterName(res);
+
+    removeLastChat();
+    addChat("🎮 第 " + roundCount + " 局开始！难度：" + difficultyLabel(difficulty));
+    addChat("💬 请开始提问，或点击【提示】获得线索");
+    addChat("📌 提示：每次提问、猜测或使用提示都会影响本局得分");
 
     logToSupabase("start", difficulty);
 }
 
 // =============================================
-// ❓ 提问（回车键支持）
+// 解析AI返回的人物名称（兼容各种格式）
+// =============================================
+function parseCharacterName(res) {
+    // 优先尝试完整JSON解析
+    try {
+        const data = JSON.parse(res);
+        if (data.name) return data.name;
+    } catch (e) { /* 继续 */ }
+
+    // 尝试从文本中提取JSON片段
+    const match = res.match(/\{[\s\S]*?\}/);
+    if (match) {
+        try {
+            const data = JSON.parse(match[0]);
+            if (data.name) return data.name;
+        } catch (e) { /* 继续 */ }
+    }
+
+    // 尝试提取 "name": "xxx" 片段
+    const nameMatch = res.match(/"name"\s*:\s*"([^"]+)"/);
+    if (nameMatch) return nameMatch[1];
+
+    // 最后兜底：直接用原文
+    return res.trim();
+}
+
+// =============================================
+// 更新总分显示
+// =============================================
+function updateScoreDisplay() {
+    const el = document.getElementById("totalScoreDisplay");
+    if (el) {
+        el.innerText = "累计得分：" + totalScore + " 分（共 " + (roundCount - 1) + " 局）";
+    }
+}
+
+// =============================================
+// ❓ 提问
 // =============================================
 async function ask() {
     if (!gameActive) return;
@@ -92,8 +124,6 @@ async function ask() {
 
     addChat("🤖 AI 思考中...");
     const res = await callAPI({ type: "ask", character, question: q });
-
-    // 移除"思考中"提示
     removeLastChat();
     addChat("🤖 AI：" + res);
 }
@@ -127,7 +157,6 @@ async function guess() {
     document.getElementById("guess").value = "";
     addChat("👤 猜测：" + g);
 
-    // 用 AI 做模糊匹配判断（防止别名、繁简体不一致等问题）
     const isCorrect = checkGuess(g, character);
 
     if (isCorrect) {
@@ -141,7 +170,7 @@ async function guess() {
 }
 
 // =============================================
-// 猜测匹配（支持简繁体、部分别名）
+// 猜测匹配（支持简繁体、大小写、包含关系）
 // =============================================
 function checkGuess(input, answer) {
     const normalize = (s) => s.replace(/\s/g, "").toLowerCase();
@@ -177,45 +206,91 @@ async function showResult(isGiveUp) {
     });
 
     removeLastChat();
+
+    // 计算本局得分（和后端逻辑保持一致）
+    let baseScore = 100;
+    if (difficulty === "hard") baseScore = 150;
+    if (difficulty === "hell") baseScore = 200;
+    const deduction = (stats.ask * 5) + (stats.hint * 10) + (stats.guess * 8);
+    const roundScore = isGiveUp ? 0 : Math.max(0, baseScore - deduction);
+
+    // 放弃得0分，胜利才累加
+    totalScore += roundScore;
+
     addChat("─────────────────────");
 
-    // 按行处理输出
+    // 渲染AI返回的文字内容（不包含链接，链接由前端生成）
     const lines = res.split("\n");
     lines.forEach(line => {
-        if (!line.trim()) return;
-
-        if (line.startsWith("Wikipedia：") || line.startsWith("百度百科：")) {
-            const colonIdx = line.indexOf("：");
-            const label = line.substring(0, colonIdx);
-            const url = line.substring(colonIdx + 1).trim();
-            const div = document.createElement("div");
-            div.style.margin = "4px 0";
-            div.innerHTML = label + "：<a href='" + encodeURI(url) + "' target='_blank' style='color:#4fc3f7;'>" + url + "</a>";
-            document.getElementById("chat").appendChild(div);
-            document.getElementById("chat").scrollTop = 9999;
-        } else {
-            addChat(line);
-        }
+        if (line.trim()) addChat(line);
     });
 
     addChat("─────────────────────");
+
+    // ✅ 链接完全由前端生成，不依赖AI输出，100%可靠
+    const wikiUrl = "https://zh.wikipedia.org/wiki/" + encodeURIComponent(character);
+    const baiduUrl = "https://baike.baidu.com/item/" + encodeURIComponent(character);
+
+    addLink("📖 Wikipedia（需要梯子）", wikiUrl);
+    addLink("📖 百度百科", baiduUrl);
+
+    addChat("─────────────────────");
+    addChat("🏆 本局得分：" + roundScore + " 分" + (isGiveUp ? "（放弃不得分）" : ""));
+    addChat("📊 累计总分：" + totalScore + " 分（共 " + roundCount + " 局）");
+
     document.getElementById("gameStatus").innerText = "游戏结束";
-    addChat("🔄 点击下方按钮重新开始");
-    document.getElementById("restartBtn").style.display = "inline-block";
+
+    // 显示两个按钮
+    document.getElementById("continueBtn").style.display = "inline-block";
+    document.getElementById("changeDiffBtn").style.display = "inline-block";
+
+    updateScoreDisplay();
 }
 
 // =============================================
-// 🔄 重新开始
+// 添加可点击链接到聊天区
 // =============================================
-function restart() {
+function addLink(label, url) {
+    const div = document.createElement("div");
+    div.style.margin = "4px 0";
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.color = "#4fc3f7";
+    a.style.textDecoration = "underline";
+    a.innerText = label + "：" + url;
+    div.appendChild(a);
+    document.getElementById("chat").appendChild(div);
+    document.getElementById("chat").scrollTop = 9999;
+}
+
+// =============================================
+// 🔄 继续答题（同难度，分数累加）
+// =============================================
+function continueGame() {
+    document.getElementById("continueBtn").style.display = "none";
+    document.getElementById("changeDiffBtn").style.display = "none";
+    // 直接用当前难度重新开一局
+    startGame(difficulty);
+}
+
+// =============================================
+// 🔄 换个难度（回到难度选择，分数保留）
+// =============================================
+function changeDifficulty() {
     character = "";
     hintLevel = 0;
     stats = { ask: 0, hint: 0, guess: 0 };
     gameActive = false;
-    clearChat();
-    document.getElementById("restartBtn").style.display = "none";
+
+    document.getElementById("continueBtn").style.display = "none";
+    document.getElementById("changeDiffBtn").style.display = "none";
     document.getElementById("gameBox").style.display = "none";
     document.getElementById("difficultyBox").style.display = "block";
+
+    // 更新难度选择页面的分数显示
+    updateScoreDisplay();
 }
 
 // =============================================
@@ -272,9 +347,7 @@ function addChat(text) {
 
 function removeLastChat() {
     const chat = document.getElementById("chat");
-    if (chat.lastChild) {
-        chat.removeChild(chat.lastChild);
-    }
+    if (chat.lastChild) chat.removeChild(chat.lastChild);
 }
 
 function clearChat() {
@@ -289,13 +362,13 @@ function difficultyLabel(d) {
 // ⌨️ 回车键支持
 // =============================================
 document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById("question")?.addEventListener("keydown", function (e) {
+    document.getElementById("question")?.addEventListener("keydown", e => {
         if (e.key === "Enter") ask();
     });
-    document.getElementById("guess")?.addEventListener("keydown", function (e) {
+    document.getElementById("guess")?.addEventListener("keydown", e => {
         if (e.key === "Enter") guess();
     });
-    document.getElementById("username")?.addEventListener("keydown", function (e) {
+    document.getElementById("username")?.addEventListener("keydown", e => {
         if (e.key === "Enter") login();
     });
 });

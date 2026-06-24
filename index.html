@@ -1,191 +1,224 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎮 AI历史人物猜谜游戏</title>
-<style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 AI历史人物猜谜游戏</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-        font-family: "Microsoft YaHei", Arial, sans-serif;
-        background: linear-gradient(135deg, #1a1a2e, #16213e);
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        padding: 30px 10px;
-        color: #eee;
-    }
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
 
-    .container {
-        width: 100%;
-        max-width: 700px;
-        background: #0f3460;
-        border-radius: 16px;
-        padding: 30px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+            color: #e0c97f;
+            text-align: center;
+        }
 
-    h1 {
-        text-align: center;
-        font-size: 26px;
-        margin-bottom: 20px;
-        color: #e94560;
-    }
+        #totalScoreDisplay {
+            font-size: 0.9rem;
+            color: #a0c4ff;
+            margin-bottom: 20px;
+            min-height: 20px;
+            text-align: center;
+        }
 
-    #welcomeText {
-        text-align: center;
-        color: #a8dadc;
-        font-size: 16px;
-        margin-bottom: 16px;
-        min-height: 24px;
-    }
+        .box {
+            background: #16213e;
+            border: 1px solid #0f3460;
+            border-radius: 12px;
+            padding: 28px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 16px;
+        }
 
-    input {
-        padding: 10px 14px;
-        border-radius: 8px;
-        border: none;
-        font-size: 15px;
-        outline: none;
-        background: #1a1a2e;
-        color: #eee;
-        width: 60%;
-    }
+        .box h2 {
+            color: #e0c97f;
+            margin-bottom: 16px;
+            font-size: 1.2rem;
+        }
 
-    button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 15px;
-        cursor: pointer;
-        margin: 4px;
-        transition: 0.2s;
-    }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            background: #0f3460;
+            color: #e0e0e0;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            outline: none;
+        }
 
-    button:hover { opacity: 0.85; }
+        input[type="text"]:focus {
+            border-color: #e0c97f;
+        }
 
-    .btn-primary { background: #e94560; color: white; }
-    .btn-easy    { background: #06d6a0; color: #1a1a2e; font-weight: bold; }
-    .btn-hard    { background: #f77f00; color: white; font-weight: bold; }
-    .btn-hell    { background: #d62828; color: white; font-weight: bold; }
-    .btn-hint    { background: #457b9d; color: white; }
-    .btn-giveup  { background: #6c757d; color: white; }
-    .btn-restart { background: #e94560; color: white; display: none; }
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
 
-    hr { border-color: #1a4a7a; margin: 20px 0; }
+        button:hover { opacity: 0.85; }
 
-    #difficultyBox, #gameBox {
-        display: none;
-        text-align: center;
-    }
+        .btn-primary  { background: #e0c97f; color: #1a1a2e; }
+        .btn-easy     { background: #4caf50; color: #fff; margin: 4px; }
+        .btn-hard     { background: #ff9800; color: #fff; margin: 4px; }
+        .btn-hell     { background: #f44336; color: #fff; margin: 4px; }
+        .btn-hint     { background: #7c4dff; color: #fff; margin: 4px; }
+        .btn-giveup   { background: #607d8b; color: #fff; margin: 4px; }
+        .btn-continue { background: #4caf50; color: #fff; margin: 4px; }
+        .btn-change   { background: #2196f3; color: #fff; margin: 4px; }
 
-    #difficultyBox h2, #gameBox h2 {
-        font-size: 20px;
-        margin-bottom: 16px;
-        color: #a8dadc;
-    }
+        .difficulty-desc {
+            font-size: 0.82rem;
+            color: #90a4ae;
+            margin: 2px 4px 10px 4px;
+            line-height: 1.5;
+        }
 
-    #gameStatus {
-        font-size: 18px;
-        color: #e94560;
-        margin-bottom: 10px;
-    }
+        #chat {
+            background: #0f1e3d;
+            border-radius: 8px;
+            padding: 14px;
+            height: 340px;
+            overflow-y: auto;
+            font-size: 0.93rem;
+            line-height: 1.7;
+            margin-bottom: 14px;
+            border: 1px solid #0f3460;
+            word-break: break-all;
+        }
 
-    #chat {
-        background: #1a1a2e;
-        border-radius: 10px;
-        padding: 14px;
-        height: 320px;
-        overflow-y: auto;
-        text-align: left;
-        font-size: 14px;
-        line-height: 1.8;
-        margin-bottom: 16px;
-        color: #ccc;
-    }
+        #chat div { margin: 3px 0; }
 
-    #chat div { margin-bottom: 4px; }
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
 
-    .input-row {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 10px;
-    }
+        .input-row input {
+            flex: 1;
+            margin-bottom: 0;
+        }
 
-    .input-row input { width: 60%; }
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
 
-    #loginBox { text-align: center; }
-    #loginBox input { width: 50%; }
+        #gameStatus {
+            font-size: 0.85rem;
+            color: #90a4ae;
+            margin-bottom: 8px;
+        }
 
-    .difficulty-note {
-        font-size: 12px;
-        color: #6c8ebf;
-        margin-top: 10px;
-    }
+        #welcomeText {
+            font-size: 0.9rem;
+            color: #a0c4ff;
+            margin-bottom: 4px;
+            text-align: center;
+        }
 
-    a { color: #57cc99; }
-</style>
+        .tag-easy { color: #4caf50; font-weight: bold; }
+        .tag-hard { color: #ff9800; font-weight: bold; }
+        .tag-hell { color: #f44336; font-weight: bold; }
+
+        /* 滚动条美化 */
+        #chat::-webkit-scrollbar { width: 6px; }
+        #chat::-webkit-scrollbar-track { background: #0f1e3d; }
+        #chat::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 3px; }
+    </style>
 </head>
-
 <body>
-<div class="container">
 
-    <h1>🎮 AI历史人物猜谜游戏</h1>
-
+    <h1>🎮 AI 历史人物猜谜</h1>
     <div id="welcomeText"></div>
+    <div id="totalScoreDisplay"></div>
 
-    <!-- 登录区域 -->
-    <div id="loginBox">
-        <input id="username" placeholder="请输入用户名" maxlength="20">
-        <button class="btn-primary" onclick="login()">进入游戏</button>
+    <!-- ==================== 登录区 ==================== -->
+    <div id="loginBox" class="box">
+        <h2>👤 请输入你的用户名</h2>
+        <input type="text" id="username" placeholder="输入用户名后按回车或点击开始" maxlength="20" />
+        <button class="btn-primary" onclick="login()">开始游戏</button>
     </div>
 
-    <hr>
+    <!-- ==================== 难度选择区 ==================== -->
+    <div id="difficultyBox" class="box" style="display:none;">
+        <h2>🎯 选择难度</h2>
 
-    <!-- 难度选择 -->
-    <div id="difficultyBox">
-        <h2>选择难度</h2>
-        <div>
-            <button class="btn-easy" onclick="startGame('easy')">简单</button>
-            <button class="btn-hard" onclick="startGame('hard')">困难</button>
-            <button class="btn-hell" onclick="startGame('hell')">地狱</button>
+        <button class="btn-easy" onclick="startGame('easy')">😊 简单</button>
+        <div class="difficulty-desc">
+            人物来自中小学历史、语文、数学、物理等课本，或全球家喻户晓的历史名人。
         </div>
-        <p class="difficulty-note">
-            简单：中小学课本人物 &nbsp;|&nbsp;
-            困难：大学扩展历史人物 &nbsp;|&nbsp;
-            地狱：极冷门历史人物
-        </p>
+
+        <button class="btn-hard" onclick="startGame('hard')">😤 困难</button>
+        <div class="difficulty-desc">
+            大学课程或历史爱好者圈子中有一定知名度的人物，中小学课本中不常见。
+        </div>
+
+        <button class="btn-hell" onclick="startGame('hell')">💀 地狱</button>
+        <div class="difficulty-desc">
+            极度冷门，只有相关领域研究学者才熟悉的历史人物，全球各文明随机出题。
+        </div>
     </div>
 
-    <!-- 游戏区域 -->
-    <div id="gameBox">
+    <!-- ==================== 游戏区 ==================== -->
+    <div id="gameBox" class="box" style="display:none;">
         <div id="gameStatus">游戏中...</div>
+
+        <!-- 聊天记录 -->
         <div id="chat"></div>
 
+        <!-- 提问行 -->
         <div class="input-row">
-            <input id="question" placeholder="输入问题（如：他是中国人吗？）"
-                onkeydown="if(event.key==='Enter') ask()">
+            <input type="text" id="question" placeholder="向AI提问（例如：这个人是中国人吗？）" maxlength="100" />
             <button class="btn-primary" onclick="ask()">提问</button>
         </div>
 
+        <!-- 猜测行 -->
         <div class="input-row">
-            <input id="guess" placeholder="输入你猜的人物名称"
-                onkeydown="if(event.key==='Enter') guess()">
+            <input type="text" id="guess" placeholder="输入你猜的人物名称" maxlength="50" />
             <button class="btn-primary" onclick="guess()">猜测</button>
         </div>
 
-        <div>
-            <button class="btn-hint" onclick="hint()">💡 提示</button>
+        <!-- 操作按钮行 -->
+        <div class="action-row">
+            <button class="btn-hint" onclick="hint()">💡 获取提示</button>
             <button class="btn-giveup" onclick="giveUp()">🏳️ 放弃本局</button>
-            <button class="btn-restart" id="restartBtn" onclick="restart()">🔄 重新开始</button>
+        </div>
+
+        <!-- 结算后按钮（默认隐藏） -->
+        <div class="action-row" style="margin-top:10px;">
+            <button id="continueBtn" class="btn-continue" onclick="continueGame()" style="display:none;">
+                🔄 继续答题（同难度，分数累加）
+            </button>
+            <button id="changeDiffBtn" class="btn-change" onclick="changeDifficulty()" style="display:none;">
+                🎯 换个难度
+            </button>
         </div>
     </div>
 
-</div>
-
-<script src="game.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>

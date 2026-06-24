@@ -15,7 +15,6 @@ export default async function handler(req, res) {
     // =========================
     if (type === "start") {
 
-        // 用时间戳 + 随机数作为种子，引导 AI 选择不同人物
         const seed = Date.now() % 10000;
         const rand = Math.floor(Math.random() * 1000);
 
@@ -60,7 +59,7 @@ ${difficultyCondition}
 
 ⚠️严格规则：
 - 必须选择真实存在的历史人物
-- 不允许犯常识性错误（例如：孔子姓孔名丘，不是"姓孔"这种笼统说法）
+- 不允许犯常识性错误（例如：孔子名丘，字仲尼，不能说"孔子姓孔"这种笼统表述）
 - 人物必须有可验证的历史记载
 - 每次调用都应选择不同的人物，利用随机种子保证多样性
 - 只输出JSON格式，不要输出任何其他内容
@@ -167,6 +166,7 @@ ${hintInstruction}
 
     // =========================
     // 🏁 结算系统
+    // 注意：链接由前端生成，这里只输出人物介绍和得分数字
     // =========================
     if (type === "end") {
 
@@ -179,37 +179,33 @@ ${hintInstruction}
         const deduction = (ask * 5) + (hint * 10) + (guess * 8);
         const finalScore = Math.max(0, baseScore - deduction);
 
-        const wiki = `https://zh.wikipedia.org/wiki/${encodeURIComponent(character)}`;
-        const baidu = `https://baike.baidu.com/item/${encodeURIComponent(character)}`;
-
         prompt = `
 你是游戏结算系统。
 
 本局人物：${character}
+本局得分：${finalScore}
 
-请按照以下格式输出（全部使用现代中文白话文，禁止任何英文，禁止文言文）：
+请严格按照以下格式输出，全部使用现代中文白话文，禁止任何英文，禁止文言文：
 
 【人物生平】
-用200字左右介绍该人物的生平，包括出生背景、主要经历、重要事件，语言通俗易懂。
+用200字左右介绍该人物的生平，包括出生背景、主要经历、重要事件，语言通俗易懂。如史料较少请注明"史料记载有限"。
 
 【主要成就】
 • 成就一
-• 成就二  
+• 成就二
 • 成就三（如有）
 
 【历史影响】
 用一到两句话说明该人物对历史的影响和意义。
 
-本局得分：${finalScore}分
-Wikipedia：${wiki}
-百度百科：${baidu}
+【本局得分】
+${finalScore}分
 
 ⚠️规则：
 - 全部使用中文，绝对禁止英文单词
 - 禁止文言文
 - 语言通俗易懂
-- 如史料较少可注明"史料记载有限"
-- 严格按照上述格式输出，不要改变格式
+- 严格按照上述四个区块格式输出，不要增减区块，不要改变区块标题
 `;
     }
 
