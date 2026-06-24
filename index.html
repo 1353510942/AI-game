@@ -5,42 +5,72 @@
 <title>AI历史人物猜谜游戏</title>
 
 <style>
-body{font-family:Arial;background:#f4f4f4;text-align:center}
-.box{width:700px;margin:auto;background:#fff;padding:20px;border-radius:10px}
-#chat{height:300px;overflow:auto;border:1px solid #ddd;padding:10px;text-align:left}
-button{margin:5px;padding:8px}
+body {
+    font-family: Arial;
+    background: #f4f4f4;
+    text-align: center;
+}
+
+.container {
+    width: 700px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    margin-top: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px #ccc;
+}
+
+button {
+    margin: 5px;
+    padding: 8px 12px;
+}
+#chat {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    margin-top: 10px;
+    padding: 10px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="box">
+<div class="container">
 
-<h2>🎮 AI历史人物猜谜</h2>
+<h2>🎮 AI历史人物猜谜游戏</h2>
+
+<p>欢迎你：<span id="userShow"></span></p>
 
 <input id="username" placeholder="输入用户名">
-<button onclick="login()">进入</button>
-
-<div id="game" style="display:none">
-
-<p id="welcome"></p>
-
-<select id="mode">
-<option value="easy">简单</option>
-<option value="hard">困难</option>
-<option value="hell">地狱</option>
-</select>
-
-<button onclick="startGame()">开始</button>
-<button onclick="giveUp()">放弃</button>
-<button onclick="hint()">提示</button>
+<button onclick="login()">进入游戏</button>
 
 <hr>
 
+<div id="modeBox" style="display:none;">
+<h3>选择难度</h3>
+<button onclick="setMode('easy')">简单</button>
+<button onclick="setMode('hard')">困难</button>
+<button onclick="setMode('hell')">地狱</button>
+</div>
+
+<div id="gameBox" style="display:none;">
+
+<h3 id="status">游戏中...</h3>
+
 <div id="chat"></div>
 
-<input id="input" placeholder="提问或猜测">
-<button onclick="ask()">提交</button>
+<input id="question" placeholder="输入问题">
+<button onclick="ask()">提问</button>
+
+<br><br>
+
+<input id="guess" placeholder="猜人物">
+<button onclick="guess()">猜测</button>
+
+<button onclick="hint()">提示</button>
+<button onclick="giveUp()">放弃</button>
 
 </div>
 

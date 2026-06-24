@@ -1,104 +1,122 @@
+let username = "";
+let mode = "";
+let answer = "";
 
-// ================= 用户 =================
-let username="";
-let character="";
-let mode="easy";
-let count=0;
+// ======================
+// 🔐 Supabase配置（替换这里）
+// ======================
+const SUPABASE_URL = "https://xddrgmvrcldfnodylwip.supabase.co";
+const SUPABASE_KEY = "sb_publishable_WLLFrWKugeSBaViGn4OkPQ_Dmp6Zn1z";
 
-// ================= 登录 =================
-function login(){
-username=document.getElementById("username").value;
-if(!username)return alert("输入用户名");
+// ======================
+// 🚀 DeepSeek后端（注意：不是API KEY）
+// ======================
+const API_URL = "/api/deepseek";
 
-document.getElementById("game").style.display="block";
-document.getElementById("welcome").innerText="欢迎："+username;
+// ======================
+
+function login() {
+    username = document.getElementById("username").value;
+    if (!username) return alert("请输入名字");
+
+    document.getElementById("userShow").innerText = username;
+    document.getElementById("modeBox").style.display = "block";
+
+    logToSupabase("login", "null");
 }
 
-// ================= Supabase（你替换这里） =================
-const SUPABASE_URL="https://xddrgmvrcldfnodylwip.supabase.co";
-const SUPABASE_KEY="sb_publishable_WLLFrWKugeSBaViGn4OkPQ_Dmp6Zn1z";
-
-// ================= DeepSeek（改为后端调用） =================
-
-// 👉 不再暴露 key
-
-// ================= 开始游戏 =================
-async function startGame(){
-count=0;
-document.getElementById("chat").innerHTML="";
-
-mode=document.getElementById("mode").value;
-
-character=await callServer("choose",mode);
-
-add("AI已选择人物，请开始");
+function setMode(m) {
+    mode = m;
+    document.getElementById("gameBox").style.display = "block";
+    startGame();
 }
 
-// ================= 提问 =================
-async function ask(){
-let q=document.getElementById("input").value;
-if(!q)return;
+async function startGame() {
+    addChat("AI正在选择人物...");
 
-count++;
+    const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            type: "choose",
+            mode: mode
+        })
+    });
 
-add("你："+q);
+    const data = await res.json();
+    answer = data.result;
 
-let res=await callServer("ask",q);
-
-add("AI："+res);
-
-log("ask");
+    addChat("游戏开始！");
 }
 
-// ================= 提示 =================
-async function hint(){
-let res=await callServer("hint",character);
-add("💡提示："+res);
-log("hint");
+async function ask() {
+    let q = document.getElementById("question").value;
+
+    const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            type: "ask",
+            data: answer,
+            mode: q
+        })
+    });
+
+    const data = await res.json();
+    addChat("AI: " + data.result);
 }
 
-// ================= 放弃 =================
-async function giveUp(){
-let res=await callServer("bio",character);
-add("📚答案："+character);
-add(res);
-log("giveup");
+async function hint() {
+    const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+            type: "hint",
+            data: answer
+        }),
+        headers: {"Content-Type": "application/json"}
+    });
+
+    const data = await res.json();
+    addChat("💡提示：" + data.result);
 }
 
-// ================= 调用后端 =================
-async function callServer(type,data){
-
-let res=await fetch("/api/deepseek",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({type,data,mode})
-});
-
-let json=await res.json();
-return json.result;
+function giveUp() {
+    addChat("你放弃了本局游戏");
+    logToSupabase("giveup", answer);
 }
 
-// ================= Supabase记录 =================
-async function log(action){
+async function guess() {
+    let g = document.getElementById("guess").value;
 
-await fetch(SUPABASE_URL+"/rest/v1/players",{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-"apikey":SUPABASE_KEY,
-"Authorization":"Bearer "+SUPABASE_KEY
-},
-body:JSON.stringify({
-name:username,
-mode:mode,
-result:action
-})
-});
+    if (g === answer) {
+        addChat("🎉 正确！");
+        logToSupabase("win", answer);
+    } else {
+        addChat("❌ 错误");
+    }
 }
 
-// ================= UI =================
-function add(t){
-let d=document.getElementById("chat");
-d.innerHTML+="<p>"+t+"</p>";
-d.scrollTop=d.scrollHeight;
+function addChat(msg) {
+    let div = document.createElement("div");
+    div.innerText = msg;
+    document.getElementById("chat").appendChild(div);
+}
+
+// ======================
+// 📊 Supabase记录
+// ======================
+async function logToSupabase(mode, result) {
+    await fetch(SUPABASE_URL + "/rest/v1/players", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
+        },
+        body: JSON.stringify({
+            name: username,
+            mode: mode,
+            result: result
+        })
+    });
 }
