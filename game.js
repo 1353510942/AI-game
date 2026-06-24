@@ -44,6 +44,7 @@ async function startGame(d) {
     document.getElementById("difficultyBox").style.display = "none";
     document.getElementById("gameBox").style.display = "block";
     document.getElementById("gameStatus").innerText = "游戏中...";
+    document.getElementById("restartBtn").style.display = "none";
 
     clearChat();
     addChat("🎮 系统：正在选择人物，请稍候...");
@@ -55,16 +56,29 @@ async function startGame(d) {
         character = data.name;
         addChat("🎮 游戏开始！难度：" + difficultyLabel(difficulty));
         addChat("💬 请开始提问，或点击【提示】获得线索");
+        addChat("📌 提示：每次提问、猜测或使用提示都会影响最终得分");
     } catch (e) {
+        // 如果 JSON 解析失败，尝试提取 JSON 部分
+        const match = res.match(/\{[\s\S]*\}/);
+        if (match) {
+            try {
+                const data = JSON.parse(match[0]);
+                character = data.name;
+                addChat("🎮 游戏开始！难度：" + difficultyLabel(difficulty));
+                addChat("💬 请开始提问，或点击【提示】获得线索");
+                return;
+            } catch (e2) { /* 继续往下 */ }
+        }
         character = res.trim();
         addChat("🎮 游戏开始！难度：" + difficultyLabel(difficulty));
+        addChat("💬 请开始提问，或点击【提示】获得线索");
     }
 
     logToSupabase("start", difficulty);
 }
 
 // =============================================
-// ❓ 提问
+// ❓ 提问（回车键支持）
 // =============================================
 async function ask() {
     if (!gameActive) return;
@@ -76,7 +90,11 @@ async function ask() {
     addChat("👤 你问：" + q);
     document.getElementById("question").value = "";
 
+    addChat("🤖 AI 思考中...");
     const res = await callAPI({ type: "ask", character, question: q });
+
+    // 移除"思考中"提示
+    removeLastChat();
     addChat("🤖 AI：" + res);
 }
 
@@ -87,10 +105,11 @@ async function hint() {
     if (!gameActive) return;
 
     stats.hint++;
-    addChat("💡 请求第 " + (hintLevel + 1) + " 级提示...");
+    addChat("💡 正在获取第 " + (hintLevel + 1) + " 级提示...");
 
     const res = await callAPI({ type: "hint", character, hintLevel });
-    addChat("💡 提示：" + res);
+    removeLastChat();
+    addChat("💡 提示 " + (hintLevel + 1) + "：" + res);
 
     hintLevel++;
 }
@@ -108,14 +127,27 @@ async function guess() {
     document.getElementById("guess").value = "";
     addChat("👤 猜测：" + g);
 
-    if (g === character) {
+    // 用 AI 做模糊匹配判断（防止别名、繁简体不一致等问题）
+    const isCorrect = checkGuess(g, character);
+
+    if (isCorrect) {
         addChat("🎉 恭喜你猜对了！正在生成结算...");
         gameActive = false;
         logToSupabase("win", character);
         await showResult(false);
     } else {
-        addChat("❌ 猜错了，再试试！");
+        addChat("❌ 猜错了，再试试！（提示：请使用该人物最常见的中文名称）");
     }
+}
+
+// =============================================
+// 猜测匹配（支持简繁体、部分别名）
+// =============================================
+function checkGuess(input, answer) {
+    const normalize = (s) => s.replace(/\s/g, "").toLowerCase();
+    const a = normalize(input);
+    const b = normalize(answer);
+    return a === b || b.includes(a) || a.includes(b);
 }
 
 // =============================================
@@ -135,7 +167,7 @@ async function giveUp() {
 // 🏁 结算（胜利或放弃都调用）
 // =============================================
 async function showResult(isGiveUp) {
-    addChat("📊 正在生成人物介绍和评分...");
+    addChat("📊 正在生成人物介绍和评分，请稍候...");
 
     const res = await callAPI({
         type: "end",
@@ -144,29 +176,30 @@ async function showResult(isGiveUp) {
         stats
     });
 
-    // 把结果按行展示（支持百科链接格式化）
+    removeLastChat();
+    addChat("─────────────────────");
+
+    // 按行处理输出
     const lines = res.split("\n");
     lines.forEach(line => {
-        if (line.trim()) {
-            if (line.includes("Wikipedia：") || line.includes("百度百科：")) {
-                // 链接行变成可点击链接
-                const parts = line.split("：");
-                if (parts.length >= 2) {
-                    const label = parts[0].trim();
-                    const url = parts.slice(1).join("：").trim();
-                    const div = document.createElement("div");
-                    div.innerHTML = label + "：<a href='" + url + "' target='_blank'>" + url + "</a>";
-                    document.getElementById("chat").appendChild(div);
-                }
-            } else {
-                addChat(line);
-            }
+        if (!line.trim()) return;
+
+        if (line.startsWith("Wikipedia：") || line.startsWith("百度百科：")) {
+            const colonIdx = line.indexOf("：");
+            const label = line.substring(0, colonIdx);
+            const url = line.substring(colonIdx + 1).trim();
+            const div = document.createElement("div");
+            div.style.margin = "4px 0";
+            div.innerHTML = label + "：<a href='" + encodeURI(url) + "' target='_blank' style='color:#4fc3f7;'>" + url + "</a>";
+            document.getElementById("chat").appendChild(div);
+            document.getElementById("chat").scrollTop = 9999;
+        } else {
+            addChat(line);
         }
     });
 
-    // 重新开始按钮
-    document.getElementById("gameStatus").innerText = "游戏结束";
     addChat("─────────────────────");
+    document.getElementById("gameStatus").innerText = "游戏结束";
     addChat("🔄 点击下方按钮重新开始");
     document.getElementById("restartBtn").style.display = "inline-block";
 }
@@ -232,8 +265,16 @@ async function logToSupabase(action, value) {
 function addChat(text) {
     const div = document.createElement("div");
     div.innerText = text;
+    div.style.margin = "4px 0";
     document.getElementById("chat").appendChild(div);
     document.getElementById("chat").scrollTop = 9999;
+}
+
+function removeLastChat() {
+    const chat = document.getElementById("chat");
+    if (chat.lastChild) {
+        chat.removeChild(chat.lastChild);
+    }
 }
 
 function clearChat() {
@@ -243,3 +284,18 @@ function clearChat() {
 function difficultyLabel(d) {
     return { easy: "简单", hard: "困难", hell: "地狱" }[d] || d;
 }
+
+// =============================================
+// ⌨️ 回车键支持
+// =============================================
+document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById("question")?.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") ask();
+    });
+    document.getElementById("guess")?.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") guess();
+    });
+    document.getElementById("username")?.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") login();
+    });
+});
